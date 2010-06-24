@@ -1,0 +1,372 @@
+> # To run interactively:
+> # > library(RtTests)
+> # > source.pkg("versioning")
+> # > source("versioning/tests/testEnvironmentSetup.Rc", verbose = FALSE)
+> # > runtests("all", "versioning")
+> #
+> # Setup test environment.
+> # This works both in R CMD check and with runtests.
+> src <- "testEnvironmentSetup.Rc"
+> if (file.exists(src)) source(src, verbose = FALSE)
+#@ ignore-output
+> # Start of tests.
+> # Test getLibraryPaths and resetLibraryPaths
+> origPaths <- getLibraryPaths()
+> setTestLibraryPaths()
+> getLibraryPaths()[1:2]
+#@ gsub(".:", "", actual)
+[1] "/tmp/testlib1" "/tmp/testlib2"
+> resetLibraryPaths(resetOriginal = TRUE)
+> setTestLibraryPaths()
+> # Test installedPackages
+> installedPackages()
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.0-1" "/tmp/testlib1/a/0.0-1"
+a "0.1-0" "/tmp/testlib1/a/0.1-0"
+a "0.1-0" "/tmp/testlib2/a/0.1-0"
+a "0.1-1" "/tmp/testlib2/a/0.1-1"
+a "0.2-0" "/tmp/testlib1/a/0.2-0"
+a "0.2-1" "/tmp/testlib1/a/0.2-1"
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+a "1.0-0" "/tmp/testlib2/a/1.0-0"
+a "1.1-1" "/tmp/testlib1/a/1.1-1"
+a "1.2-1" "/tmp/testlib1/a/1.2-1"
+a "1.2-2" "/tmp/testlib1/a/1.2-2"
+a "1.2-2" "/tmp/testlib2/a/1.2-2"
+a "2.0-0" "/tmp/testlib1/a/2.0-0"
+a "2.0-1" "/tmp/testlib1/a/2.0-1"
+a "2.0-1" "/tmp/testlib2/a/2.0-1"
+a "2.0-2" "/tmp/testlib2/a/2.0-2"
+a "2.1-0" "/tmp/testlib2/a/2.1-0"
+a "2.1-1" "/tmp/testlib2/a/2.1-1"
+a "2.2-1" "/tmp/testlib1/a/2.2-1"
+a "2.2-1" "/tmp/testlib2/a/2.2-1"
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "0.1-2" "/tmp/testlib1/c/0/1/2"
+c "0.1-3" "/tmp/testlib1/c/0/1/3"
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> installedPackages(package="xxx", system = FALSE, site = FALSE)
+     Version LibPath
+> installedPackages(getLibraryPaths()[[1]])
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.0-1" "/tmp/testlib1/a/0.0-1"
+a "0.1-0" "/tmp/testlib1/a/0.1-0"
+a "0.2-0" "/tmp/testlib1/a/0.2-0"
+a "0.2-1" "/tmp/testlib1/a/0.2-1"
+a "1.1-1" "/tmp/testlib1/a/1.1-1"
+a "1.2-1" "/tmp/testlib1/a/1.2-1"
+a "1.2-2" "/tmp/testlib1/a/1.2-2"
+a "2.0-0" "/tmp/testlib1/a/2.0-0"
+a "2.0-1" "/tmp/testlib1/a/2.0-1"
+a "2.2-1" "/tmp/testlib1/a/2.2-1"
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "0.1-2" "/tmp/testlib1/c/0/1/2"
+c "0.1-3" "/tmp/testlib1/c/0/1/3"
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> installedPackages(priority = "NA", fields = c("LazyLoad"), subdirs = FALSE, columns = NULL)[, c("Package","LibPath","Version","Priority","Bundle","Contains","Depends","Imports","Suggests","OS_type"), drop = FALSE]
+#@ gsub(".:", "", actual)
+  Package LibPath         Version Priority Bundle Contains Depends Imports Suggests OS_type
+b "b"     "/tmp/testlib1" "1.2-3" NA       NA     NA       NA      NA      NA       NA     
+> installedPackages(getLibraryPaths()[[1]], columns = NULL)[, c("Package","LibPath","Version","Priority","Bundle","Contains","Depends","Imports","Suggests","OS_type"), drop = FALSE]
+#@ gsub(".:", "", actual)
+  Package LibPath                 Version Priority Bundle Contains Depends Imports Suggests OS_type
+a "a"     "/tmp/testlib1/a/0.0-1" "0.0-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.1-0" "0.1-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.2-0" "0.2-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.2-1" "0.2-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.1-1" "1.1-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.2-1" "1.2-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.2-2" "1.2-2" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.0-0" "2.0-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.0-1" "2.0-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.2-1" "2.2-1" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1/b/0.5-0" "0.5-0" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1"         "1.2-3" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1/b/1.5-0" "1.5-0" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/1/2" "0.1-2" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/1/3" "0.1-3" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/2/0" "0.2-0" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/1/2/1" "1.2-1" NA       NA     NA       NA      NA      NA       NA     
+> installedPackages(priority = "NA", columns = NULL)[, c("Package","LibPath","Version","Priority","Bundle","Contains","Depends","Imports","Suggests","OS_type"), drop = FALSE]
+#@ gsub(".:", "", actual)
+  Package LibPath                 Version Priority Bundle Contains Depends Imports Suggests OS_type
+a "a"     "/tmp/testlib1/a/0.0-1" "0.0-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.1-0" "0.1-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/0.1-0" "0.1-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/0.1-1" "0.1-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.2-0" "0.2-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.2-1" "0.2-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/0.2-2" "0.2-2" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/1.0-0" "1.0-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.1-1" "1.1-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.2-1" "1.2-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.2-2" "1.2-2" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/1.2-2" "1.2-2" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.0-0" "2.0-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.0-1" "2.0-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/2.0-1" "2.0-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/2.0-2" "2.0-2" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/2.1-0" "2.1-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/2.1-1" "2.1-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.2-1" "2.2-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib2/a/2.2-1" "2.2-1" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1/b/0.5-0" "0.5-0" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1"         "1.2-3" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1/b/1.5-0" "1.5-0" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/1/2" "0.1-2" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/1/3" "0.1-3" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/2/0" "0.2-0" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/1/2/1" "1.2-1" NA       NA     NA       NA      NA      NA       NA 
+> dim(installedPackages(system = NA, site = NA))[[1]] > dim(installedPackages(priority = "NA"))[[1]]
+[1] TRUE
+> dim(installedPackages(system = NA, site = NA))[[1]] > dim(installedPackages())[[1]]
+[1] TRUE
+> installedPackages(subdirs = FALSE)
+#@ gsub(".:", "", actual)
+  Version LibPath        
+b "1.2-3" "/tmp/testlib1"
+> installedPackages(subdirs = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.0-1" "/tmp/testlib1/a/0.0-1"
+a "0.1-0" "/tmp/testlib1/a/0.1-0"
+a "0.1-0" "/tmp/testlib2/a/0.1-0"
+a "0.1-1" "/tmp/testlib2/a/0.1-1"
+a "0.2-0" "/tmp/testlib1/a/0.2-0"
+a "0.2-1" "/tmp/testlib1/a/0.2-1"
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+a "1.0-0" "/tmp/testlib2/a/1.0-0"
+a "1.1-1" "/tmp/testlib1/a/1.1-1"
+a "1.2-1" "/tmp/testlib1/a/1.2-1"
+a "1.2-2" "/tmp/testlib1/a/1.2-2"
+a "1.2-2" "/tmp/testlib2/a/1.2-2"
+a "2.0-0" "/tmp/testlib1/a/2.0-0"
+a "2.0-1" "/tmp/testlib1/a/2.0-1"
+a "2.0-1" "/tmp/testlib2/a/2.0-1"
+a "2.0-2" "/tmp/testlib2/a/2.0-2"
+a "2.1-0" "/tmp/testlib2/a/2.1-0"
+a "2.1-1" "/tmp/testlib2/a/2.1-1"
+a "2.2-1" "/tmp/testlib1/a/2.2-1"
+a "2.2-1" "/tmp/testlib2/a/2.2-1"
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "0.1-2" "/tmp/testlib1/c/0/1/2"
+c "0.1-3" "/tmp/testlib1/c/0/1/3"
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> installedPackages(latest = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "2.2-1" "/tmp/testlib1/a/2.2-1"
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> installedPackages(masked = TRUE)
+     Version LibPath
+> installedPackages(loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath        
+b "1.2-3" "/tmp/testlib1"
+> installedPackages(package = "b")
+#@ gsub(".:", "", actual)
+  Version LibPath                
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+> installedPackages(package = "[b|c]")
+#@ gsub(".:", "", actual)
+  Version LibPath                
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "0.1-2" "/tmp/testlib1/c/0/1/2"
+c "0.1-3" "/tmp/testlib1/c/0/1/3"
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> installedPackages(package = "a", version = "^1")
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "1.0-0" "/tmp/testlib2/a/1.0-0"
+a "1.1-1" "/tmp/testlib1/a/1.1-1"
+a "1.2-1" "/tmp/testlib1/a/1.2-1"
+a "1.2-2" "/tmp/testlib1/a/1.2-2"
+a "1.2-2" "/tmp/testlib2/a/1.2-2"
+> installedPackages(package = "a", version = "...-2")
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+a "1.2-2" "/tmp/testlib1/a/1.2-2"
+a "1.2-2" "/tmp/testlib2/a/1.2-2"
+a "2.0-2" "/tmp/testlib2/a/2.0-2"
+> installedPackages(minVer = 1)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "1.0-0" "/tmp/testlib2/a/1.0-0"
+a "1.1-1" "/tmp/testlib1/a/1.1-1"
+a "1.2-1" "/tmp/testlib1/a/1.2-1"
+a "1.2-2" "/tmp/testlib1/a/1.2-2"
+a "1.2-2" "/tmp/testlib2/a/1.2-2"
+a "2.0-0" "/tmp/testlib1/a/2.0-0"
+a "2.0-1" "/tmp/testlib1/a/2.0-1"
+a "2.0-1" "/tmp/testlib2/a/2.0-1"
+a "2.0-2" "/tmp/testlib2/a/2.0-2"
+a "2.1-0" "/tmp/testlib2/a/2.1-0"
+a "2.1-1" "/tmp/testlib2/a/2.1-1"
+a "2.2-1" "/tmp/testlib1/a/2.2-1"
+a "2.2-1" "/tmp/testlib2/a/2.2-1"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> installedPackages(maxVer = 1)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.0-1" "/tmp/testlib1/a/0.0-1"
+a "0.1-0" "/tmp/testlib1/a/0.1-0"
+a "0.1-0" "/tmp/testlib2/a/0.1-0"
+a "0.1-1" "/tmp/testlib2/a/0.1-1"
+a "0.2-0" "/tmp/testlib1/a/0.2-0"
+a "0.2-1" "/tmp/testlib1/a/0.2-1"
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+c "0.1-2" "/tmp/testlib1/c/0/1/2"
+c "0.1-3" "/tmp/testlib1/c/0/1/3"
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+> installedPackages(maxVer = "1.1", minVer = "0.2-0")
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.2-0" "/tmp/testlib1/a/0.2-0"
+a "0.2-1" "/tmp/testlib1/a/0.2-1"
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+a "1.0-0" "/tmp/testlib2/a/1.0-0"
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+> installedPackages(loadable = TRUE, columns = NULL)[, c("Package","LibPath","Version","Priority","Bundle","Contains","Depends","Imports","Suggests","OS_type","Loaded","Loadable","Masked"), drop = FALSE]
+#@ gsub(".:", "", actual)
+  Package LibPath         Version Priority Bundle Contains Depends Imports Suggests OS_type Loaded  Loadable Masked 
+b "b"     "/tmp/testlib1" "1.2-3" NA       NA     NA       NA      NA      NA       NA      "FALSE" "TRUE"   "FALSE"
+> installedPackages(getLibraryPaths()[[1]], columns = NULL)[, c("Package","LibPath","Version","Priority","Bundle","Contains","Depends","Imports","Suggests","OS_type"), drop = FALSE]
+#@ gsub(".:", "", actual)
+  Package LibPath                 Version Priority Bundle Contains Depends Imports Suggests OS_type
+a "a"     "/tmp/testlib1/a/0.0-1" "0.0-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.1-0" "0.1-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.2-0" "0.2-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/0.2-1" "0.2-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.1-1" "1.1-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.2-1" "1.2-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/1.2-2" "1.2-2" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.0-0" "2.0-0" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.0-1" "2.0-1" NA       NA     NA       NA      NA      NA       NA     
+a "a"     "/tmp/testlib1/a/2.2-1" "2.2-1" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1/b/0.5-0" "0.5-0" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1"         "1.2-3" NA       NA     NA       NA      NA      NA       NA     
+b "b"     "/tmp/testlib1/b/1.5-0" "1.5-0" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/1/2" "0.1-2" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/1/3" "0.1-3" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/0/2/0" "0.2-0" NA       NA     NA       NA      NA      NA       NA     
+c "c"     "/tmp/testlib1/c/1/2/1" "1.2-1" NA       NA     NA       NA      NA      NA       NA     
+> # Test setLibraryPaths
+> setLibraryPaths("rel")
+> getLibraryPaths()[1:5]
+#@ gsub(".:", "", actual)
+[1] "/tmp/testlib1"         "/tmp/testlib1/a/2.2-1" "/tmp/testlib1/b/1.5-0" "/tmp/testlib1/c/1/2/1" "/tmp/testlib2"        
+> installedPackages(loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "2.2-1" "/tmp/testlib1/a/2.2-1"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> setLibraryPaths("dev")
+> installedPackages(loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.2-3" "/tmp/testlib1"        
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+> setLibraryPaths("dev", versions = c(a = 0))
+> installedPackages(loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.2-3" "/tmp/testlib1"        
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+> setLibraryPaths("rel", versions = c(a = 0))
+> installedPackages(loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> setLibraryPaths("rel", versions = c(a = 1))
+> installedPackages(loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "1.2-2" "/tmp/testlib1/a/1.2-2"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> setLibraryPaths("rel", versions = c(a = 1.1))
+> installedPackages(loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "1.1-1" "/tmp/testlib1/a/1.1-1"
+b "1.2-3" "/tmp/testlib1"        
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+c "1.2-1" "/tmp/testlib1/c/1/2/1"
+> setLibraryPaths("rel", versions = c(a = "1.1-1",b = 0.5,c = 0))
+> installedPackages(loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "1.1-1" "/tmp/testlib1/a/1.1-1"
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.2-3" "/tmp/testlib1"        
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+> library("a")
+> library("c")
+> installedPackages(loaded = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "1.1-1" "/tmp/testlib1/a/1.1-1"
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+> unloadNamespace("a")
+> unloadNamespace("c")
+> setLibraryPaths("dev", versions = c(b = "1.2-3"))
+> library("a")
+> library("b")
+> library("c")
+> installedPackages(loaded = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+b "1.2-3" "/tmp/testlib1"        
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+> unloadNamespace("a")
+> unloadNamespace("c")
+> setLibraryPaths("dev", versions = c(b = "1.2-3"))
+> installedPackages(masked = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+b "0.5-0" "/tmp/testlib1/b/0.5-0"
+b "1.5-0" "/tmp/testlib1/b/1.5-0"
+> installedPackages(masked = FALSE, loadable = TRUE)
+#@ gsub(".:", "", actual)
+  Version LibPath                
+a "0.2-2" "/tmp/testlib2/a/0.2-2"
+b "1.2-3" "/tmp/testlib1"        
+c "0.2-0" "/tmp/testlib1/c/0/2/0"
+> installedPackages(version = "^1.0-0$", fields = c("Author", "Licence"))
+#@ gsub(".:", "", actual)
+  Version LibPath                 Author         Licence
+a "1.0-0" "/tmp/testlib2/a/1.0-0" "Who wrote it" NA     
+> teardownTestEnvironment()
+#@ ignore-output

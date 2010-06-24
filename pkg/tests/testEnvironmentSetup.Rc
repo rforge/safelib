@@ -1,0 +1,244 @@
+## Define some test helper functions.
+
+setTestLibraryPaths <- function()
+{
+    testlib1 <- file.path(dirname(tempdir()), "testlib1")
+    testlib2 <- file.path(dirname(tempdir()), "testlib2")
+    .libPaths(c(testlib1, testlib2, .Library.site, .Library))
+}
+
+teardownTestEnvironment <- function()
+{
+    testlib1 <- file.path(dirname(tempdir()), "testlib1")
+    testlib2 <- file.path(dirname(tempdir()), "testlib2")
+
+    unlink(testlib1, recursive = T)
+    unlink(testlib2, recursive = T)
+}
+
+installTestPackage <- function(name = "A", version = "1.0-0",
+                               where = .libPaths()[1])
+{
+    tmpDir <- tempdir()
+    tmpPkgDir <- file.path(tmpDir, name)
+
+    whereIsDir <- file.info(where)$isdir
+    if (is.na(whereIsDir) || !whereIsDir)
+        stop("'", where, "' must be a directory")
+
+    ## Add one function.
+    pkgEnv <- new.env()
+    funName <- paste(name, "PackageVersion", sep = "")
+    assign(funName,
+           eval(parse(text = paste("function() \"", version, "\"", sep =""))),
+##         eval(substitute(function() VERSION, list(VERSION = version))),
+           env = pkgEnv)
+    srcPath <- file.path(tmpDir, "testPackageVersion.R")
+    dump(funName, file = srcPath, envir = pkgEnv)
+    on.exit(unlink(srcPath))
+
+    ## Build
+    package.skeleton(name = name, namespace = TRUE, path = tmpDir,
+                     force = T, code_files = srcPath)
+
+    ## Fix version number.
+    descPath <- file.path(tmpDir, name, "DESCRIPTION")
+    desc <- read.dcf(file = descPath)
+    desc[, "Version"] = version
+    write.dcf(desc, file = descPath)
+
+    # Install
+    install.packages(tmpPkgDir, lib = where, repos = NULL, type = "source")
+
+    unlink(tmpPkgDir, recursive = TRUE)
+}
+
+installTestPackages <- function()
+{
+    testlib1 <- file.path(dirname(tempdir()), "testlib1")
+    testlib2 <- file.path(dirname(tempdir()), "testlib2")
+
+    unlink(testlib1, recursive = T)
+    unlink(testlib2, recursive = T)
+
+    dir.create(testlib1)
+    dir.create(testlib2)
+
+    ## Put 10 random, unique "a" package versions
+    ## in testlib1.
+    ## round(runif(3, -1, 2)+.5)
+
+    package <- "a"
+    testLib <- testlib1
+    dir.create(file.path(testLib, package))
+
+    version <- "0.0-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "0.1-0"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "0.2-0"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "0.2-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "1.1-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "1.2-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "1.2-2"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "2.0-0"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "2.0-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "2.2-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    ## Put 10 random, unique "a" package versions
+    ## in testlib2. testlib1 and testlib2 have
+    ## duplicates.
+    ## round(runif(3, -1, 2)+.5)
+
+    package <- "a"
+    testLib <- testlib2
+    dir.create(file.path(testLib, package))
+
+    version <- "0.1-0"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "0.1-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "0.2-2"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "1.0-0"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "1.2-2"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "2.0-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "2.0-2"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "2.1-0"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "2.1-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "2.2-1"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    ## "b" has a package in root.
+
+    package <- "b"
+    testLib <- testlib1
+    dir.create(file.path(testLib, package))
+
+    version <- "1.2-3"
+    where <- testLib
+    installTestPackage(package, version = version, where = where)
+
+    version <- "0.5-0"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    version <- "1.5-0"
+    where <- file.path(testLib, package, version)
+    dir.create(where)
+    installTestPackage(package, version = version, where = where)
+
+    ## "c" is nested 3 deep.
+
+    package <- "c"
+    testLib <- testlib1
+    dir.create(file.path(testLib, package))
+
+    version <- "0.1-2"
+    dir.create(file.path(testLib, package, "0"))
+    dir.create(file.path(testLib, package, "0", "1"))
+    dir.create(file.path(testLib, package, "0", "1", "2"))
+    where <- file.path(testLib, package, "0", "1", "2")
+    installTestPackage(package, version = version, where = where)
+
+    version <- "0.1-3"
+    dir.create(file.path(testLib, package, "0", "1", "3"))
+    where <- file.path(testLib, package, "0", "1", "3")
+    installTestPackage(package, version = version, where = where)
+
+    version <- "0.2-0"
+    dir.create(file.path(testLib, package, "0", "2"))
+    dir.create(file.path(testLib, package, "0", "2", "0"))
+    where <- file.path(testLib, package, "0", "2", "0")
+    installTestPackage(package, version = version, where = where)
+
+    version <- "1.2-1"
+    dir.create(file.path(testLib, package, "1"))
+    dir.create(file.path(testLib, package, "1", "2"))
+    dir.create(file.path(testLib, package, "1", "2", "1"))
+    where <- file.path(testLib, package, "1", "2", "1")
+    installTestPackage(package, version = version, where = where)
+}
+
+## Make sure source worked.
+if (find("installTestPackage") != ".GlobalEnv")
+    stop("Failed to source test helper functions.")
+
+## Setup test environment by installing some
+## test packages in test libraries.
+
+installTestPackages()
+options(width = 1000)

@@ -1,0 +1,9 @@
+  This package has a
+             function 'installedPackages that recursively searches through 
+             R's library paths '.libPaths()' and their sub-directories. It 
+             supports filtering by various search criteria, like whether or not 
+             packages are loaded, are latest version, are in a site path
+             and much more. 'setLibraryPath' sets R's library paths to include
+             directories of packages that match certain version criteria. By
+             default it sets the library paths to point to all the latest 
+             versions of the installed packages.

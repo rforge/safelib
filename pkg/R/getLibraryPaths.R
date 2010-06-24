@@ -1,0 +1,2 @@
+getLibraryPaths <- function() .libPaths()
+
