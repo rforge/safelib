@@ -1,16 +1,16 @@
-\name{versioning-package}
-\alias{versioning-package}
-\alias{versioning}
+\name{safelibs-package}
+\alias{safelibs-package}
+\alias{safelibs}
 \docType{package}
 \title{
-  
+
   A package versioning system in which a library can store multiple
   versions of a package, and packages can be updated without interfering
   with active R sessions.
-  
+
 }
 \description{
-  
+
   A package versioning system in which a library can store multiple
   versions of a package, and packages can be updated, manually or
   automatically, without interfering with running R processes.
@@ -19,11 +19,11 @@
   mechanism, which was intended to allow a single R session to load
   multiple different versions of a package, and which may be removed
   from future versions of R.
-  
+
 }
 \details{
 \tabular{ll}{
-Package: \tab versioning\cr
+Package: \tab safelibs\cr
 Type: \tab Package\cr
 Version: \tab 1.0\cr
 Date: \tab 2008-12-08\cr
@@ -37,7 +37,7 @@ LazyLoad: \tab yes\cr
   versioned package install mechanism, which stores packages in
   directories whose names are the concatenation of the package name and
   the version number.
-  
+
   This system provides two major capabilities:
   \itemize{
     \item Multiple versions of packages can be stored in a library, and an R
@@ -49,9 +49,9 @@ LazyLoad: \tab yes\cr
   safe automated updating of R packages in a centrally managed system
   without the need to try to find "safe" periods of low activity.
   }
-  
+
   This package has a
-  function 'installedPackages that recursively searches through 
+  function 'installedPackages that recursively searches through
   R's library paths '.libPaths()' and their sub-directories. It support
   filtering by various search criteria, like whether or not packages
   are loaded, are latest version, are in a site path

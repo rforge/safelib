@@ -1,8 +1,8 @@
 > # To run interactively:
-> # > library(RtTests)
-> # > source.pkg("versioning")
-> # > source("versioning/tests/testEnvironmentSetup.Rc", verbose = FALSE)
-> # > runtests("all", "versioning")
+> # > library(scriptests)
+> # > source.pkg("safelibs")
+> # > source("safelibs/tests/testEnvironmentSetup.Rc", verbose = FALSE)
+> # > runtests("all", "safelibs")
 > #
 > # Setup test environment.
 > # This works both in R CMD check and with runtests.

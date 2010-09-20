@@ -1,0 +1,210 @@
+#!/bin/bash
+
+# Do not abort on commands that returns non-zero.
+# We handle each error as they appear.
+set +e
+
+# Avoid users aliases.
+unalias -a
+
+# Make sure RTools is on the path before cygwin and anything else.
+if [[ $OSTYPE == cygwin ]]; then
+  PATH="/cygdrive/c/Rtools/bin:/cygdrive/c/Rtools/perl/bin:/cygdrive/c/Rtools/MinGW/bin:.:$PATH"
+  export PATH
+fi
+
+# Usage:
+#    R-safe-install [-l DEST] [-n] [-force] [-x] [libname.zip]
+# Install  from .../R/releases/<libname>_r<N.M> to $R_LIBS_SAFE/<libname>_N.M-R-C,
+# where N.M-R is taken from the package DESCRIPTION file.
+# and C is automatically incremented with each install.
+# The version number N.M-R, should be interpreted as major.minor-release.
+#
+# Loading libraries in R:
+#
+# Users/programs who want to load a specific older version
+# should use setLibraryPaths("dev", versions = c(libname = "0.0-3").
+#
+# In production the major and minor number should be specified
+# for all packages, like
+# library("res", versions = c(libname1 = 2.3, libname2 = "1.4"),
+# which will make it possible to load version 2.3.R1 and 1.4-R2,
+# where R1 and R2 are the highest numbers installed.
+#
+# The library tree to install to can be specified via '--library',
+# or via the R_LIBS_SAFE environment variable.
+#
+
+# Set -x option early.
+set +x
+for x in "$@" ; do if [ "$x" = -x ] ; then set -x ; break ; fi ; done
+
+CMD="$0 $*"
+CWD="$PWD"
+
+DEST="$R_LIBS_SAFE"
+
+NO_ACTION=0
+FORCE=0
+
+function usage { echo 'usage: R-install [-l DEST] [-n] [-f] [-h] [-x] [libname[_rN.M]]*' 1>&2 ; }
+
+while (( $# > 0 )) ; do
+    case "$1" in
+      -n|--noaction)
+          # don't do anything
+          NO_ACTION=1
+          shift
+          ;;
+      -l|--library)
+          shift
+          DEST=$1
+          ;;
+      -f|--force)
+          FORCE=1
+          shift
+          ;;
+      -h*)
+          usage
+          cat <<EOF
+
+R-install: installs one or more R packages.
+
+Options:
+  -f|-force: force install over an existing istallation.
+  -h|-help: print help.
+  -l|-lib|-library <DEST>: install into R library tree at destination path.
+  -n|-noaction: just print out what would be installed.
+  -x: turn on shell echo.
+
+Typical usage:
+Install development version of package strat1.live running
+from the its development directory .../R/packages/strat1.live
+  $ R-install
+
+Install development version of package strat1.live running
+from the development directory .../R/packages
+  $ R-install strat1.live
+
+Install latest released version of package strat1.live_r1.5 running
+from the its development directory .../R/packages/strat1.live
+  $ R-install -r
+
+Install released version 1.3 of package strat1.live,
+running from its development directory .../R/packages/strat1.live
+  $ R-install -r -v 1.3
+
+Install latest released version of package strat1.live_r1.5 running
+from the release directory .../R/releases
+  $ R-install strat1.live
+
+Install a particular released version of package strat1.live running
+from its release directory .../R/releases/strat1.live_r1.3
+  $ R-install
+
+EOF
+          exit 0
+          ;;
+      -x)
+          set -x
+          shift
+          ;;
+      -*)
+          usage
+          exit 1
+          ;;
+      *)
+          break;;
+     esac
+done
+
+if [[ -z "$DEST" ]] ; then
+    echo "Must specify destination either in env var R_LIBS_SAFE or via -l/--library"
+    exit 1
+elif [[ ! -d $DEST ]] ; then
+    echo "Cannot install to '$DEST'. Must be an existing directory."
+    exit 1
+else
+    if [[ ! -w $DEST ]] ; then
+        echo "Cannot install to '$DEST'. You do not have write permission."
+        exit 1
+    fi
+fi
+
+shopt -s nullglob
+
+PKGS=($*)
+if (( ${#PKGS[*]} == 0 )) ; then
+    echo "Must specify gzipped packages to install on command line"
+    exit 1
+fi
+
+STATUS=0
+
+for PKG in "${PKGS[@]}" ; do
+    if ! expr "$PKG" : '.*\\.tar\\.gz$' > /dev/null ; then
+        echo "Must supply .tar.gz versions of packages: $PKG looks different."
+        continue
+    fi
+    if [[ ! -f "$PKG" ]] ; then
+        echo "$PKG does not exist"
+        continue
+    fi
+    PKGVERSION=`echo $PKG | sed -n -e 's/\\\\(.*\\\\)_\\\\([0-9.-]*\\\\)\\\\.tar\\\\.gz$/\\\\2/p'`
+    PKGNAME=`echo $PKG | sed -n -e 's/\\\\(.*\\\\)_\\\\([0-9.-]*\\\\)\\\\.tar\\\\.gz$/\\\\1/p'`
+    if [[ -z "$PKGVERSION" ]] ; then
+        echo "Unable to extract version number from file $PKG (should be like pkgname_1.2-3.tar.gz)"
+        continue
+    fi
+    if [[ -z "$PKGNAME" ]] ; then
+        echo "Unable to extract package name from file $PKG (should be like pkgname_1.2-3.tar.gz)"
+        continue
+    fi
+
+    if [[ ! -d "$DEST/$PKGNAME" ]] ; then
+        mkdir "$DEST/$PKGNAME"
+        PKGINSTANCE=0
+    elif [[ ! -e "$DEST/$PKGNAME/$PKGVERSION-i0" ]] ; then
+        PKGINSTANCE=0
+    else
+        EXISTINGINSTANCES=(`\ls -1d $DEST/$PKGNAME/$PKGVERSION-i* | sed -n -e 's/^.*\\\\/[0-9.-]*-i\\\\([0-9]*\\\\)$/\\\\1/p' | sort -n`)
+        for i in ${EXISTINGINSTANCES[*]} ; do
+            POSSIBLE[$i]=0
+        done
+        for (( i=0 ; i <= ${#POSSIBLE[*]} + 1 ; i++ )) ; do if [[ -z "${POSSIBLE[$i]}" ]] ; then PKGINSTANCE=$i ; break ; fi ; done
+        if [[ -z "$PKGINSTANCE" ]] ; then
+            echo "Failed to find possible number for new package instance??"
+            continue
+        fi
+        if [[ -e "$DEST/$PKGNAME/$PKGVERSION-i$PKGINSTANCE" ]] ; then
+            echo "Oops - instance already exists $DEST/$PKGNAME/$PKGVERSION-i$PKGINSTANCE"
+            continue
+        fi
+    fi
+
+    ## Imbed version number and instance in path.
+    FDEST="$DEST/$PKGNAME/$PKGVERSION-i$PKGINSTANCE"
+
+    if [[ $FORCE == 0 && -e $FDEST/$PKG  ]] ; then
+        echo Package $SOURCE from "$PWD"
+        echo is already installed as "$FDEST/$PKG"
+        echo Use -f option to force a new install.
+        continue
+    fi
+
+    if (( $NO_ACTION )) ; then
+        echo Would install $PKG as $FDEST/$PKGNAME
+        continue
+    fi
+
+    echo Installing $PKG as $FDEST/$PKGNAME
+
+    # Install package
+    if ! R CMD INSTALL --library="$FDEST" "$PKG" ; then
+        echo Failed to install "$PWD/$SOURCE"
+        STATUS=1
+        continue
+    fi
+done
+
+exit $STATUS

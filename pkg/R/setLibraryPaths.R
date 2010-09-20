@@ -146,8 +146,8 @@ setLibraryPaths <- function(spec = NULL, versions = NULL, noaction = FALSE)
         ## It get a bit tricky here. We need to use '\\\\' network paths
         ## instead of '//' for Windows, in order to avoid this warning:
         ##   "In .find.package(package, lib.loc, quiet = TRUE) :
-        ##    package 'versioning' found more than once,
-        ##    using the one found in '\\jacona/home/lhansen/R/libs/versioning'"
+        ##    package 'safelibs' found more than once,
+        ##    using the one found in '\\jacona/home/lhansen/R/libs/safelibs'"
         ## when loading packages. Unfortunately, the '.libPaths' functions does
         ## not work with '\\\\' paths. It calls a function 'Sys.glob' that removes
         ## these paths. Seems like a bug. We do not actually need or want any

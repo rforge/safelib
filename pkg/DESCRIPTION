@@ -12,6 +12,6 @@ Description: Provides support for storing multiple versions of packages in a lib
   to be loaded in a single R session, safelibs allows just one version of package
   to be loaded.  However, the version of a package to be loaded can be specified.
   Additionally, safelib supports updating libraries with new versions of packages
-  in a way that doesn't disturb running R processes that already loaded the package.
+  in a way that does not disturb running R processes that have packages already loaded.
 License: GPL
 LazyLoad: yes
