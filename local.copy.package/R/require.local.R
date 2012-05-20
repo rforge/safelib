@@ -20,9 +20,11 @@ require.local <- function (package, lib.loc = NULL, quietly = FALSE, warn.confli
         if (inherits(value, "error")) {
             if (!quietly) {
                 msg <- conditionMessage(value)
-                cat("Failed with error:  ", sQuote(msg), "\n",
-                  file = stderr(), sep = "")
-                .Internal(printDeferredWarnings())
+                cat("Failed with error:  ", sQuote(msg), "\n", file = stderr(), sep = "")
+                # .Internal(printDeferredWarnings())
+                # codetools doesn't like use of .Internal(), so do it differently, but
+                # this might result in duplicate printing of warning messages...
+                if (length(warnings())) print(warnings())
             }
             return(invisible(FALSE))
         }

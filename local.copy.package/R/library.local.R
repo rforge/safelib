@@ -1,3 +1,6 @@
+f <- function(a, b=1, c=2) a+b+c
+g <- function(a, ...) f(..., a=a)
+
 library.local <- function(package, character.only=FALSE,
                           ...,
                           lib.loc=NULL, binary.only=getOption('library.local.binary.only', TRUE),
@@ -24,12 +27,13 @@ library.local <- function(package, character.only=FALSE,
              if (!character.only && is.name(package.orig))
              paste(" (if '", as.character(package.orig), "' is a var, do library.local(",
                    as.character(package.orig), ', character.only=TRUE, ...))', sep=''))
+    # codetools complains that '... may be used in an incorrect context' if ... is not the 1st actual arg to library()?
     if (binary.only && system.file(package=package, 'libs')=='')
-        return(library(package, character.only=TRUE, lib.loc=lib.loc, ...))
+        return(library(..., package=package, character.only=TRUE, lib.loc=lib.loc))
     if (local.deps) {
         deps <- setdiff(all.pkg.depends(package, lib.loc=lib.loc), c(package, .packages()))
         for (dep in deps) {
-            library.local(dep, character.only=TRUE, ..., local.deps=FALSE, lib.loc=lib.loc, compare.method=compare.method,
+            library.local(package=dep, character.only=TRUE, ..., local.deps=FALSE, lib.loc=lib.loc, compare.method=compare.method,
                           local.lib.locs=local.lib.locs, pkg.subdirs=pkg.subdirs, verbose=verbose, dry.run=dry.run)
         }
     }
@@ -108,23 +112,25 @@ library.local <- function(package, character.only=FALSE,
                 gmt.offset <-st.gmt - st.local
                 same.n <- nrow(copyInfo) == nrow(origInfo)
                 same.size <- same.n && all(copyInfo$size == origInfo$size)
-                same.mtime <- same.n && (   copyInfo$mtime == origInfo$mtime
-                                         || copyInfo$mtime + gmt.offset == origInfo$mtime
-                                         || copyInfo$mtime - gmt.offset == origInfo$mtime
-                                         || copyInfo$mtime + gmt.offset + 3600 == origInfo$mtime
-                                         || copyInfo$mtime - (gmt.offset + 3600) == origInfo$mtime)
-                if (!same.n || !same.size || !same.mtime) {
+                same.names <- all(rownames(copyInfo) == rownames(origInfo))
+                same.mtime <- (same.n &&
+                              all(same.mtime.i <- (copyInfo$mtime == origInfo$mtime
+                                                   | copyInfo$mtime + gmt.offset == origInfo$mtime
+                                                   | copyInfo$mtime - gmt.offset == origInfo$mtime
+                                                   | copyInfo$mtime + gmt.offset + 3600 == origInfo$mtime
+                                                   | copyInfo$mtime - (gmt.offset + 3600) == origInfo$mtime)))
+                if (!same.n || !same.size || !same.names || !same.mtime) {
                     if (verbose) {
-                        if (nrow(copyInfo) != nrow(origInfo)) {
+                        if (!same.n) {
                             cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by number of files\n', sep='')
-                        } else if (!all(rownames(copyInfo) == rownames(origInfo))) {
+                        } else if (!same.names) {
                             cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by names of files\n', sep='')
-                        } else if (any(i <- copyInfo$size != origInfo$size)) {
+                        } else if (!same.size) {
                             i <- which(i)[1]
                             cat('Existing copy in', copy.pkg.dir, 'differs from', orig.pkg.dir, 'by size, e.g.,',
                                 rownames(copyInfo)[i], copyInfo[i,'size'], origInfo[i, 'size'], '\n')
-                        } else if (any(i <- copyInfo$mtime != origInfo$mtime)) {
-                            i <- which(i)[1]
+                        } else if (same.mtime) {
+                            i <- which(same.mtime.i)[1]
                             cat('Existing copy in', copy.pkg.dir, 'differs from', orig.pkg.dir, 'by mtime, e.g.,',
                                 rownames(copyInfo)[i], as.character(copyInfo[i,'mtime']), as.character(origInfo[i, 'mtime']), '\n')
                         } else {
@@ -184,7 +190,7 @@ library.local <- function(package, character.only=FALSE,
             cat('Loading existing copy of ', package, ' in ', copy.pkg.dir, '\n', sep='')
     }
     if (!dry.run)
-        library(package, character.only=TRUE, lib.loc=c(copy.pkg.dir, lib.loc), ...)
+        library(..., package=package, character.only=TRUE, lib.loc=c(copy.pkg.dir, lib.loc))
     else
         cat('Not loading ', package, ' because dry.run==TRUE\n', sep='')
 }
