@@ -1,0 +1,14 @@
+Package: local.copy.package
+Type: Package
+Title: Make a local copy of a package and load it.
+Version: 1.2
+Date: 2012-03-27
+Author: Tony Plate <tplate@acm.org>
+Maintainer: Tony Plate <tplate@acm.org>
+Depends: tools
+Description: Make a local copy of a package and load
+  the copy.  Loading a package this way makes it
+  possible to update packages in the common library
+  while R sessions have a package attached.  Tries
+  to be smart about using existing copies of the package.
+License: GPL
