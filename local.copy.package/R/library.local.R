@@ -71,23 +71,66 @@ library.local <- function(package, character.only=FALSE,
         copy.pkg.dir <- orig.pkg.dir
     } else if (length(copy.pkg.dir)==1) {
         if (compare.method=='cached.info' && file.exists(file.path(copy.pkg.dir, package, 'pkginfo.rda'))) {
+            tt1 <- proc.time()[3]
             load(file.path(copy.pkg.dir, package, 'pkginfo.rda'))
             if (!exists('pkginfo', inherits=FALSE)) {
                 if (verbose)
-                    cat('Existing copy in ', copy.pkg.dir, " doesn't have value pkginfo objcect\n", sep='')
+                    cat('Existing copy in ', copy.pkg.dir, " doesn't have value pkginfo object\n", sep='')
                 copy.pkg.dir <- NULL
             } else {
+                tt2 <- proc.time()[3]
                 copyInfo <- pkginfo$files
-                pkg.files <- list.files(orig.pkg.dir, recursive=TRUE, full.name=FALSE)
-                origInfo <- file.info(file.path(orig.pkg.dir, pkg.files))[,c('size','ctime')]
-                rownames(origInfo) <- gsub('\\', '/', pkg.files, fixed=TRUE)
-                copyInfo <- copyInfo[grep(paste('^(',paste(pkg.subdirs, collapse='|'),')(/|$)',sep=''), rownames(copyInfo)),]
-                origInfo <- origInfo[grep(paste('^(',paste(pkg.subdirs, collapse='|'),')(/|$)',sep=''), rownames(origInfo)),]
-                copyInfo <- copyInfo[order(rownames(copyInfo)),]
+                pkg.files <- list.files(orig.pkg.dir, recursive=TRUE, full.names=FALSE)
+                tt3 <- proc.time()[3]
+                pkg.files.want <- grep(paste('^(',paste(pkg.subdirs, collapse='|'),')(/|$)',sep=''), pkg.files, value=TRUE)
+                origInfo <- file.info(file.path(orig.pkg.dir, pkg.files.want))[,c('size','mtime')]
+                if (colnames(origInfo)[2]=='ctime') colnames(origInfo)[2] <- 'mtime'
+                rownames(origInfo) <- gsub('\\', '/', pkg.files.want, fixed=TRUE)
                 origInfo <- origInfo[order(rownames(origInfo)),]
-                if (!isTRUE(all.equal(copyInfo, origInfo))) {
-                    if (verbose)
-                        cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by size/create-time\n', sep='')
+                tt4 <- proc.time()[3]
+                copyInfo <- copyInfo[grep(paste('^(',paste(pkg.subdirs, collapse='|'),')(/|$)',sep=''), rownames(copyInfo)),]
+                copyInfo <- copyInfo[order(rownames(copyInfo)),]
+                # This is a little odd, but on some systems, file.info() returns GMT times, and
+                # on others it returns local times.  E.g., in Windows XP 64 bit,
+                # running in the R console, and Rterm under command window, we see:
+                # > file.info('c:/Windows')$mtime
+                # [1] "2011-05-07 15:57:48 EDT"
+                # while running from R.exe under cygwin, we see:
+                # > file.info('c:/Windows')$mtime
+                # [1] "2011-05-07 10:57:48 EDT"
+                # What makes thing even more diabolical is that the above difference is 5 hours,
+                # but the current GMT/EDT difference is 4 hours, so it seems like the cygwin one
+                # is getting a EST offset.
+                # So, find the the GMT offset, and try it with +1 hour too.
+                st <- Sys.time()
+                st.local <- as.numeric(as.POSIXct(format(as.POSIXlt(st))))
+                st.gmt <- as.numeric(as.POSIXct(format(as.POSIXlt(st, 'GMT'))))
+                gmt.offset <-st.gmt - st.local
+                same.n <- nrow(copyInfo) == nrow(origInfo)
+                same.size <- same.n && all(copyInfo$size == origInfo$size)
+                same.mtime <- same.n && (   copyInfo$mtime == origInfo$mtime
+                                         || copyInfo$mtime + gmt.offset == origInfo$mtime
+                                         || copyInfo$mtime - gmt.offset == origInfo$mtime
+                                         || copyInfo$mtime + gmt.offset + 3600 == origInfo$mtime
+                                         || copyInfo$mtime - (gmt.offset + 3600) == origInfo$mtime)
+                if (!same.n || !same.size || !same.mtime) {
+                    if (verbose) {
+                        if (nrow(copyInfo) != nrow(origInfo)) {
+                            cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by number of files\n', sep='')
+                        } else if (!all(rownames(copyInfo) == rownames(origInfo))) {
+                            cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by names of files\n', sep='')
+                        } else if (any(i <- copyInfo$size != origInfo$size)) {
+                            i <- which(i)[1]
+                            cat('Existing copy in', copy.pkg.dir, 'differs from', orig.pkg.dir, 'by size, e.g.,',
+                                rownames(copyInfo)[i], copyInfo[i,'size'], origInfo[i, 'size'], '\n')
+                        } else if (any(i <- copyInfo$mtime != origInfo$mtime)) {
+                            i <- which(i)[1]
+                            cat('Existing copy in', copy.pkg.dir, 'differs from', orig.pkg.dir, 'by mtime, e.g.,',
+                                rownames(copyInfo)[i], as.character(copyInfo[i,'mtime']), as.character(origInfo[i, 'mtime']), '\n')
+                        } else {
+                            cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by some(?) size/create-time\n', sep='')
+                        }
+                    }
                     copy.pkg.dir <- NULL
                 } else {
                     if (verbose>1)
@@ -115,10 +158,10 @@ library.local <- function(package, character.only=FALSE,
             }
             # if we don't have cached file info, create it
             if (length(copy.pkg.dir) && !file.exists(file.path(copy.pkg.dir, package, 'pkginfo.rda'))) {
-                pkg.files <- list.files(orig.pkg.dir, recursive=TRUE, full.name=FALSE)
+                pkg.files <- list.files(orig.pkg.dir, recursive=TRUE, full.names=FALSE)
                 fileInfo <- file.info(file.path(orig.pkg.dir, pkg.files))
                 rownames(fileInfo) <- gsub('\\', '/', pkg.files, fixed=TRUE)
-                pkginfo <- list(pkg.dir=normalizePath(orig.pkg.dir), files=fileInfo[,c('size','ctime')])
+                pkginfo <- list(pkg.dir=normalizePath(orig.pkg.dir), files=fileInfo[,c('size','mtime')])
                 save(list='pkginfo', file=file.path(copy.pkg.dir, package, 'pkginfo.rda'))
             }
         }
@@ -131,10 +174,10 @@ library.local <- function(package, character.only=FALSE,
             cat('Making local copy of ', package, ' in ', copy.pkg.dir, '\n', sep='')
         if (!isTRUE(file.copy(orig.pkg.dir, copy.pkg.dir, recursive=TRUE)))
             stop('failed to copy from ', orig.pkg.dir, ' to ', copy.pkg.dir)
-        pkg.files <- list.files(orig.pkg.dir, recursive=TRUE, full.name=FALSE)
+        pkg.files <- list.files(orig.pkg.dir, recursive=TRUE, full.names=FALSE)
         fileInfo <- file.info(file.path(orig.pkg.dir, pkg.files))
         rownames(fileInfo) <- gsub('\\', '/', pkg.files, fixed=TRUE)
-        pkginfo <- list(pkg.dir=normalizePath(orig.pkg.dir), files=fileInfo[,c('size','ctime')])
+        pkginfo <- list(pkg.dir=normalizePath(orig.pkg.dir), files=fileInfo[,c('size','mtime')])
         save(list='pkginfo', file=file.path(copy.pkg.dir, package, 'pkginfo.rda'))
     } else {
         if (verbose)
@@ -150,6 +193,8 @@ path.package.local <- function(package, original=TRUE) {
     path <- path.package(package)
     if (!original)
         return(path)
+    pkginfo <- NULL # to shut up code checks
+    remove('pkginfo', inherits=FALSE)
     if (regexpr(paste(package, '_local_copy_', sep=''), path) && file.exists(file.path(path, 'pkginfo.rda'))) {
         try(load(file.path(path, 'pkginfo.rda')))
         if (exists('pkginfo', inherits=FALSE))
@@ -312,15 +357,15 @@ library.local.clean <- function(older.than=NULL,
         # just work in writable component of local.lib.locs
         if (file.exists(dir) && isTRUE(file.info(dir)$isdir) && isTRUE(as.logical(file.access(dir, 4)==0))) {
             pkg.paths <- Sys.glob(file.path(dir, '*', '*'))
-            pkg.ctime <- file.info(pkg.paths)$ctime
-            if (any(i <- (is.na(pkg.ctime) | pkg.ctime > older.than))) {
+            pkg.mtime <- file.info(pkg.paths)$mtime
+            if (any(i <- (is.na(pkg.mtime) | pkg.mtime > older.than))) {
                 pkg.paths <- pkg.paths[!i]
-                pkg.ctime <- pkg.ctime[!i]
+                pkg.mtime <- pkg.mtime[!i]
             }
             if (length(pkg.paths)) {
                 pkg.names <- basename(pkg.paths)
                 # for each package, remove the most recent from the list
-                pkg.del <- unlist(tapply(seq(length=length(pkg.paths)), pkg.names, function(ii) ii[-order(pkg.ctime[ii], decreasing=TRUE)[1]]))
+                pkg.del <- unlist(tapply(seq(length=length(pkg.paths)), pkg.names, function(ii) ii[-order(pkg.mtime[ii], decreasing=TRUE)[1]]))
                 for (x in pkg.paths[pkg.del]) {
                     if (   file.exists(file.path(x, 'libs'))
                         && unlink(file.path(x, 'libs'), force=TRUE, recursive=TRUE)==0
