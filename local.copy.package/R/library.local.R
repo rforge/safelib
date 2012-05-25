@@ -112,7 +112,7 @@ library.local <- function(package, character.only=FALSE,
                 gmt.offset <-st.gmt - st.local
                 same.n <- nrow(copyInfo) == nrow(origInfo)
                 same.size <- same.n && all(copyInfo$size == origInfo$size)
-                same.names <- all(rownames(copyInfo) == rownames(origInfo))
+                same.names <- same.n && all(rownames(copyInfo) == rownames(origInfo))
                 same.mtime <- (same.n &&
                               all(same.mtime.i <- (copyInfo$mtime == origInfo$mtime
                                                    | copyInfo$mtime + gmt.offset == origInfo$mtime
@@ -126,7 +126,7 @@ library.local <- function(package, character.only=FALSE,
                         } else if (!same.names) {
                             cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by names of files\n', sep='')
                         } else if (!same.size) {
-                            i <- which(i)[1]
+                            i <- which(copyInfo$size != origInfo$size)[1]
                             cat('Existing copy in', copy.pkg.dir, 'differs from', orig.pkg.dir, 'by size, e.g.,',
                                 rownames(copyInfo)[i], copyInfo[i,'size'], origInfo[i, 'size'], '\n')
                         } else if (same.mtime) {
