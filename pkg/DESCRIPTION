@@ -6,7 +6,7 @@ Date: 2010-04-29
 Author: Lars Hansen
 Maintainer: Tony Plate <tplate@acm.org>
 Depends: R (>= 2.8.1), utils
-Suggests: RtTests
+Suggests: scriptests
 Description: Provides support for storing multiple versions of packages in a library.
   Unlike R's versioned install mechanism, which allows multiple versions of a package
   to be loaded in a single R session, safelibs allows just one version of package
