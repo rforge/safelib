@@ -1,10 +1,7 @@
-f <- function(a, b=1, c=2) a+b+c
-g <- function(a, ...) f(..., a=a)
-
 library.local <- function(package, character.only=FALSE,
                           ...,
                           lib.loc=NULL, binary.only=getOption('library.local.binary.only', TRUE),
-                          compare.method=c('cached.info', 'md5sum'), local.deps=TRUE,
+                          compare.method=c('description.built', 'cached.info', 'md5sum'), local.deps=TRUE,
                           local.lib.locs=c(Sys.getenv('TMPDIR'), Sys.getenv('TMP'), Sys.getenv('TEMP')),
                           pkg.subdirs=c('R','libs','data'),
                           verbose=FALSE, dry.run=FALSE) {
@@ -41,7 +38,9 @@ library.local <- function(package, character.only=FALSE,
     # Could be strange/unusual circumstances where it got loaded as
     # a result of loading the dependencies
     if (is.element(package, .packages()))
-        return(.packages())
+        return(package)
+    if (verbose>2)
+        cat('library.local: Starting on', package, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
     local.lib.locs <- setdiff(local.lib.locs, '')
     local.lib.locs <- local.lib.locs[order(basename(local.lib.locs)=='R_local_libs', decreasing=TRUE)]
     local.lib.loc <- NULL
@@ -60,27 +59,49 @@ library.local <- function(package, character.only=FALSE,
             dir.create(local.lib.loc, recursive=TRUE)
     }
     orig.pkg.dir <- find.package(package, lib.loc=lib.loc)
-    orig.pkg.files <- c(file.path(orig.pkg.dir, 'DESCRIPTION'),
-                       list.files(file.path(orig.pkg.dir, pkg.subdirs), recursive=TRUE, full.names=TRUE))
     # look for candidate copies already existing
-    copy.pkg.dir <- list.files(local.lib.loc, pattern=paste(package, '_local_copy_*', sep=''), full.names=TRUE)
-    # choose the most recent if more than one
-    if (length(copy.pkg.dir) > 1)
-        copy.pkg.dir <- copy.pkg.dir[order(file.info(copy.pkg.dir)$ctime, decreasing=TRUE)[1]]
+    copy.lib.dir <- list.files(local.lib.loc, pattern=paste(package, '_local_copy_*', sep=''), full.names=TRUE)
+    # copy.lib.dir is a folder where <package> can be found, so
+    # copy.lib.dir/<package> is at the same level as orig.pkg.dir
+    # Choose the most recent copy.lib.dir there is more than one.
+    if (length(copy.lib.dir) > 1)
+        copy.lib.dir <- copy.lib.dir[order(file.info(copy.lib.dir)$ctime, decreasing=TRUE)[1]]
+    if (verbose>2)
+        cat('library.local: Comparing with', compare.method, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
     # This test shouldn't be needed, but have it here for robustness
     if (normalizePath(dirname(dirname(orig.pkg.dir))) == normalizePath(local.lib.loc)
-        && regexpr(paste(package, '_local_copy_', sep=''), basename(dirname(orig.pkg.dir)), fixed=TRUE) > 0) {
+        && regexpr(paste('^', package, '_local_copy_', sep=''), basename(dirname(orig.pkg.dir)), fixed=TRUE) > 0) {
         # The original library is already in the place where we make copies, and looks like a copy,
-        # so don't make a copy of it.
-        copy.pkg.dir <- orig.pkg.dir
-    } else if (length(copy.pkg.dir)==1) {
-        if (compare.method=='cached.info' && file.exists(file.path(copy.pkg.dir, package, 'pkginfo.rda'))) {
+        # so don't go making another a copy of it.
+        copy.lib.dir <- dirname(orig.pkg.dir)
+    } else if (length(copy.lib.dir)==1) {
+        found <- FALSE
+        if (compare.method=='description.built' && file.exists(file.path(orig.pkg.dir, 'DESCRIPTION'))) {
+            # Can use this method if the DESCRIPTION file has a 'Built:' line (which contains
+            # the timestamp (to the second) of when the package was built).
+            desc.orig <- try(readLines(file.path(orig.pkg.dir, 'DESCRIPTION')))
+            if (any(regexpr('^Built:', desc.orig) > 0)) {
+                desc.copy <- try(readLines(file.path(copy.lib.dir, package, 'DESCRIPTION')))
+                if (length(desc.orig) == length(desc.copy) && all(desc.orig == desc.copy)) {
+                    if (verbose>1)
+                        cat('Existing copy in ', copy.lib.dir, ' is same as ', orig.pkg.dir, ' by DESCRIPTION file\n', sep='')
+                } else {
+                    cat('Existing copy in ', copy.lib.dir, ' differs from ', orig.pkg.dir, ' by DESCRIPTION file\n', sep='')
+                    copy.lib.dir <- NULL
+                }
+                found <- TRUE
+            } else {
+                # Don't have a "Built:" line, use different compare method
+                compare.method <- 'cached.info'
+            }
+        }
+        if (!found && compare.method=='cached.info' && file.exists(file.path(copy.lib.dir, package, 'pkginfo.rda'))) {
             tt1 <- proc.time()[3]
-            load(file.path(copy.pkg.dir, package, 'pkginfo.rda'))
+            load(file.path(copy.lib.dir, package, 'pkginfo.rda'))
             if (!exists('pkginfo', inherits=FALSE)) {
                 if (verbose)
-                    cat('Existing copy in ', copy.pkg.dir, " doesn't have value pkginfo object\n", sep='')
-                copy.pkg.dir <- NULL
+                    cat('Existing copy in ', copy.lib.dir, " doesn't have value pkginfo object\n", sep='')
+                copy.lib.dir <- NULL
             } else {
                 tt2 <- proc.time()[3]
                 copyInfo <- pkginfo$files
@@ -111,7 +132,7 @@ library.local <- function(package, character.only=FALSE,
                 st.gmt <- as.numeric(as.POSIXct(format(as.POSIXlt(st, 'GMT'))))
                 gmt.offset <-st.gmt - st.local
                 same.n <- nrow(copyInfo) == nrow(origInfo)
-                same.size <- same.n && all(copyInfo$size == origInfo$size)
+                same.size <- same.n && all(same.size.i <- (copyInfo$size == origInfo$size))
                 same.names <- same.n && all(rownames(copyInfo) == rownames(origInfo))
                 same.mtime <- (same.n &&
                               all(same.mtime.i <- (copyInfo$mtime == origInfo$mtime
@@ -122,77 +143,89 @@ library.local <- function(package, character.only=FALSE,
                 if (!same.n || !same.size || !same.names || !same.mtime) {
                     if (verbose) {
                         if (!same.n) {
-                            cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by number of files\n', sep='')
+                            cat('Existing copy in ', copy.lib.dir, ' differs from ', orig.pkg.dir, ' by number of files\n', sep='')
                         } else if (!same.names) {
-                            cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by names of files\n', sep='')
+                            cat('Existing copy in ', copy.lib.dir, ' differs from ', orig.pkg.dir, ' by names of files\n', sep='')
                         } else if (!same.size) {
-                            i <- which(copyInfo$size != origInfo$size)[1]
-                            cat('Existing copy in', copy.pkg.dir, 'differs from', orig.pkg.dir, 'by size, e.g.,',
+                            i <- which(same.size.i)[1]
+                            cat('Existing copy in', copy.lib.dir, 'differs from', orig.pkg.dir, 'by size, e.g.,',
                                 rownames(copyInfo)[i], copyInfo[i,'size'], origInfo[i, 'size'], '\n')
                         } else if (same.mtime) {
                             i <- which(same.mtime.i)[1]
-                            cat('Existing copy in', copy.pkg.dir, 'differs from', orig.pkg.dir, 'by mtime, e.g.,',
+                            cat('Existing copy in', copy.lib.dir, 'differs from', orig.pkg.dir, 'by mtime, e.g.,',
                                 rownames(copyInfo)[i], as.character(copyInfo[i,'mtime']), as.character(origInfo[i, 'mtime']), '\n')
                         } else {
-                            cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, ' by some(?) size/create-time\n', sep='')
+                            cat('Existing copy in ', copy.lib.dir, ' differs from ', orig.pkg.dir, ' by some(?) size/create-time\n', sep='')
                         }
                     }
-                    copy.pkg.dir <- NULL
+                    copy.lib.dir <- NULL
                 } else {
                     if (verbose>1)
-                        cat('Existing copy in ', copy.pkg.dir, ' is same as ', orig.pkg.dir, ' by size/create-time\n', sep='')
+                        cat('Existing copy in ', copy.lib.dir, ' is same as ', orig.pkg.dir, ' by size/create-time\n', sep='')
                 }
             }
-        } else {
+            found <- TRUE
+        } else if (!found) {
             # compare md5sums
+            orig.pkg.files <- c(file.path(orig.pkg.dir, 'DESCRIPTION'),
+                                list.files(file.path(orig.pkg.dir, pkg.subdirs), recursive=TRUE, full.names=TRUE))
             orig.md5sum <- md5sum(orig.pkg.files)
             # strip of dirs and get in a cananoical order for comparing
             names(orig.md5sum) <- basename(orig.pkg.files)
             orig.md5sum <- orig.md5sum[order(names(orig.md5sum), orig.md5sum)]
-            copy.pkg.files <- c(file.path(copy.pkg.dir, package, 'DESCRIPTION'),
-                               list.files(file.path(copy.pkg.dir, package, pkg.subdirs), recursive=TRUE, full.names=TRUE))
+            copy.pkg.files <- c(file.path(copy.lib.dir, package, 'DESCRIPTION'),
+                               list.files(file.path(copy.lib.dir, package, pkg.subdirs), recursive=TRUE, full.names=TRUE))
             copy.md5sum <- md5sum(copy.pkg.files)
             names(copy.md5sum) <- basename(copy.pkg.files)
             copy.md5sum <- copy.md5sum[order(names(copy.md5sum), copy.md5sum)]
             if (!isTRUE(all.equal(orig.md5sum, copy.md5sum))) {
                 if (verbose)
-                    cat('Existing copy in ', copy.pkg.dir, ' differs from ', orig.pkg.dir, 'by md5sums\n', sep='')
-                copy.pkg.dir <- NULL
+                    cat('Existing copy in ', copy.lib.dir, ' differs from ', orig.pkg.dir, ' by md5sums\n', sep='')
+                copy.lib.dir <- NULL
             } else {
                 if (verbose>1)
-                    cat('Existing copy in ', copy.pkg.dir, ' is same as ', orig.pkg.dir, 'by md5sums\n', sep='')
+                    cat('Existing copy in ', copy.lib.dir, ' is same as ', orig.pkg.dir, ' by md5sums\n', sep='')
             }
             # if we don't have cached file info, create it
-            if (length(copy.pkg.dir) && !file.exists(file.path(copy.pkg.dir, package, 'pkginfo.rda'))) {
+            if (length(copy.lib.dir) && !file.exists(file.path(copy.lib.dir, package, 'pkginfo.rda'))) {
                 pkg.files <- list.files(orig.pkg.dir, recursive=TRUE, full.names=FALSE)
                 fileInfo <- file.info(file.path(orig.pkg.dir, pkg.files))
                 rownames(fileInfo) <- gsub('\\', '/', pkg.files, fixed=TRUE)
                 pkginfo <- list(pkg.dir=normalizePath(orig.pkg.dir), files=fileInfo[,c('size','mtime')])
-                save(list='pkginfo', file=file.path(copy.pkg.dir, package, 'pkginfo.rda'))
+                save(list='pkginfo', file=file.path(copy.lib.dir, package, 'pkginfo.rda'))
             }
+            found <- TRUE
         }
     }
-    # if we don't have copy.pkg.dir, create a new one and copy the library there
-    if (length(copy.pkg.dir)==0) {
-        copy.pkg.dir <- tempfile(pattern=paste(package, '_local_copy_', sep=''), tmpdir=local.lib.loc)
-        dir.create(copy.pkg.dir)
+    if (verbose>2)
+        cat('library.local: Finished comparison at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
+    # if we don't have copy.lib.dir, create a new one and copy the library there
+    if (length(copy.lib.dir)==0) {
+        copy.lib.dir <- tempfile(pattern=paste(package, '_local_copy_', sep=''), tmpdir=local.lib.loc)
+        dir.create(copy.lib.dir)
         if (verbose)
-            cat('Making local copy of ', package, ' in ', copy.pkg.dir, '\n', sep='')
-        if (!isTRUE(file.copy(orig.pkg.dir, copy.pkg.dir, recursive=TRUE)))
-            stop('failed to copy from ', orig.pkg.dir, ' to ', copy.pkg.dir)
+            cat('Making local copy of ', package, ' in ', copy.lib.dir, '\n', sep='')
+        if (!isTRUE(file.copy(orig.pkg.dir, copy.lib.dir, recursive=TRUE)))
+            stop('failed to copy from ', orig.pkg.dir, ' to ', copy.lib.dir)
         pkg.files <- list.files(orig.pkg.dir, recursive=TRUE, full.names=FALSE)
         fileInfo <- file.info(file.path(orig.pkg.dir, pkg.files))
         rownames(fileInfo) <- gsub('\\', '/', pkg.files, fixed=TRUE)
         pkginfo <- list(pkg.dir=normalizePath(orig.pkg.dir), files=fileInfo[,c('size','mtime')])
-        save(list='pkginfo', file=file.path(copy.pkg.dir, package, 'pkginfo.rda'))
+        save(list='pkginfo', file=file.path(copy.lib.dir, package, 'pkginfo.rda'))
     } else {
         if (verbose)
-            cat('Loading existing copy of ', package, ' in ', copy.pkg.dir, '\n', sep='')
+            cat('Loading existing copy of ', package, ' in ', copy.lib.dir, '\n', sep='')
     }
+    if (verbose>2)
+        cat('library.local: Loading at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), 'using lib.loc=',
+            paste(c(copy.lib.dir, lib.loc), collapse=';'), '\n')
     if (!dry.run)
-        library(..., package=package, character.only=TRUE, lib.loc=c(copy.pkg.dir, lib.loc))
+        library(..., package=package, character.only=TRUE, lib.loc=c(copy.lib.dir, lib.loc))
     else
         cat('Not loading ', package, ' because dry.run==TRUE\n', sep='')
+    if (verbose>2)
+        cat('library.local: Finished load',  package, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
+    return(package)
 }
 
 path.package.local <- function(package, original=TRUE) {
