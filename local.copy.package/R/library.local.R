@@ -24,11 +24,30 @@ library.local <- function(package, character.only=FALSE,
              if (!character.only && is.name(package.orig))
              paste(" (if '", as.character(package.orig), "' is a var, do library.local(",
                    as.character(package.orig), ', character.only=TRUE, ...))', sep=''))
-    # codetools complains that '... may be used in an incorrect context' if ... is not the 1st actual arg to library()?
-    if (binary.only && system.file(package=package, 'libs')=='')
+    priority <- utils:::packageDescription(package, fields='Priority', lib.loc=lib.loc)
+    if (is.na(priority))
+        priority <- 'NA'
+    if (verbose > 2)
+        cat('library.local:', package, 'piority:', priority, '\n')
+    # lib.loc seems to be ignored for base packages, so don't even try with them...
+    if (   (package %in% loadedNamespaces())
+        || (priority == 'base')
+        || (binary.only && system.file(package=package, 'libs')=='')) {
+        if (verbose > 2) {
+            if (package %in% loadedNamespaces())
+                cat('library.local: using ordinary library() for', package, 'because it is already loaded as a namespace\n')
+            else if (priority=='base')
+                cat('library.local: using ordinary library() for', package, 'because it is a base package\n')
+            else
+                cat('library.local: using ordinary library() for', package, 'because it has no binary and binary.only=TRUE\n')
+        }
+        # codetools complains that '... may be used in an incorrect context' if ... is not the 1st actual arg to library()?
         return(library(..., package=package, character.only=TRUE, lib.loc=lib.loc))
+    }
     if (local.deps) {
         deps <- setdiff(all.pkg.depends(package, lib.loc=lib.loc), c(package, .packages()))
+        if (length(deps) && verbose > 2)
+            cat('library.local: for', package, 'need deps:', paste(deps, collapse=', '), '\n')
         for (dep in deps) {
             library.local(package=dep, character.only=TRUE, ..., local.deps=FALSE, lib.loc=lib.loc, compare.method=compare.method,
                           local.lib.locs=local.lib.locs, pkg.subdirs=pkg.subdirs, verbose=verbose, dry.run=dry.run)
@@ -38,7 +57,7 @@ library.local <- function(package, character.only=FALSE,
     # Could be strange/unusual circumstances where it got loaded as
     # a result of loading the dependencies
     if (is.element(package, .packages()))
-        return(package)
+        return(.packages())
     if (verbose>2)
         cat('library.local: Starting on', package, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
     local.lib.locs <- setdiff(local.lib.locs, '')
@@ -67,7 +86,7 @@ library.local <- function(package, character.only=FALSE,
     if (length(copy.lib.dir) > 1)
         copy.lib.dir <- copy.lib.dir[order(file.info(copy.lib.dir)$ctime, decreasing=TRUE)[1]]
     if (verbose>2)
-        cat('library.local: Comparing with', compare.method, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
+        cat('library.local:', package, 'comparing with', compare.method, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
     # This test shouldn't be needed, but have it here for robustness
     if (normalizePath(dirname(dirname(orig.pkg.dir))) == normalizePath(local.lib.loc)
         && regexpr(paste('^', package, '_local_copy_', sep=''), basename(dirname(orig.pkg.dir)), fixed=TRUE) > 0) {
@@ -225,7 +244,7 @@ library.local <- function(package, character.only=FALSE,
         cat('Not loading ', package, ' because dry.run==TRUE\n', sep='')
     if (verbose>2)
         cat('library.local: Finished load',  package, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
-    return(package)
+    return(.packages())
 }
 
 path.package.local <- function(package, original=TRUE) {
