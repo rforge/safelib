@@ -61,6 +61,7 @@ library.local <- function(package, character.only=FALSE,
     if (verbose>2)
         cat('library.local: Starting on', package, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
     local.lib.locs <- setdiff(local.lib.locs, '')
+    local.lib.locs <- gsub('[/\\\\]$', '', local.lib.locs)
     local.lib.locs <- local.lib.locs[order(basename(local.lib.locs)=='R_local_libs', decreasing=TRUE)]
     local.lib.loc <- NULL
     # find the first writable component of local.lib.loc, and create 'R_local_libs' there
@@ -408,6 +409,7 @@ library.local.clean <- function(older.than=NULL,
     if (is.na(older.than))
         stop('ended up with a NA value for older.than')
     local.lib.locs <- unique(setdiff(local.lib.locs, ''))
+    local.lib.locs <- gsub('[/\\\\]$', '', local.lib.locs)
     local.lib.locs <- local.lib.locs[order(basename(local.lib.locs)=='R_local_libs', decreasing=TRUE)]
     for (dir in local.lib.locs) {
         if (basename(dir) != 'R_local_libs')
