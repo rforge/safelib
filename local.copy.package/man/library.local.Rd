@@ -42,7 +42,8 @@ require.local(package, lib.loc = NULL, quietly = FALSE, warn.conflicts = TRUE,
   \item{local.lib.locs}{ directory where to make local copies}
   \item{pkg.subdirs}{ which subdirectories of a package to check when
     seeing if an existing copy of a package is up-to-date}
-  \item{verbose}{ if \code{TRUE},}
+  \item{verbose}{ Can be \code{TRUE/FALSE}, or a level 1, 2, or 3.
+    \code{TRUE} is equivalent to the highest level (3).}
   \item{dry.run}{ if \code{TRUE}, do everything but load the pacakge,
     including making a copy}
   \item{quietly,warn.conflicts,keep.source}{see docs for \code{require()}}

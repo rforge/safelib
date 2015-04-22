@@ -5,6 +5,8 @@ library.local <- function(package, character.only=FALSE,
                           local.lib.locs=c(Sys.getenv('TMPDIR'), Sys.getenv('TMP'), Sys.getenv('TEMP')),
                           pkg.subdirs=c('R','libs','data'),
                           verbose=FALSE, dry.run=FALSE) {
+    if (is.logical(verbose) && verbose)
+        verbose <- 3
     non.null <- function(x, y) if (is.null(x)) y else x
     # Hack to make library.local(foo) work like library.local('foo')
     # Same ugly hack as used in library().  Would prefer not to, but
@@ -16,9 +18,11 @@ library.local <- function(package, character.only=FALSE,
     if (!is.character(package) || length(package)!=1)
         stop("'package' must be a single package name as a character vector")
     # package already loaded
-    if (is.element(package, .packages()))
+    if (is.element(package, .packages())) {
+        if (verbose > 2)
+            cat("package ", package, ' is already loaded\n')
         return(.packages())
-        # stop("package ", package, ' is already loaded')
+    }
     if (!is.element(package, .packages(lib.loc=lib.loc, all.available=TRUE)))
         stop("package ", package, ' is not found anywhere with lib.loc=', paste(non.null(lib.loc, 'NULL'), collapse=';'),
              if (!character.only && is.name(package.orig))
@@ -28,7 +32,7 @@ library.local <- function(package, character.only=FALSE,
     if (is.na(priority))
         priority <- 'NA'
     if (verbose > 2)
-        cat('library.local:', package, 'piority:', priority, '\n')
+        cat('library.local:', package, 'priority:', priority, '\n')
     # lib.loc seems to be ignored for base packages, so don't even try with them...
     if (   (package %in% loadedNamespaces())
         || (priority == 'base')
