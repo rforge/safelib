@@ -1,8 +1,8 @@
 Package: local.copy.package
 Type: Package
 Title: Make a local copy of a package and load it.
-Version: 1.5
-Date: 2013-03-11
+Version: 1.6
+Date: 2013-04-21
 Author: Tony Plate <tplate@acm.org>
 Maintainer: Tony Plate <tplate@acm.org>
 Depends: tools

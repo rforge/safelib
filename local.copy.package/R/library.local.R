@@ -18,6 +18,8 @@ library.local <- function(package, character.only=FALSE,
     if (!is.character(package) || length(package)!=1)
         stop("'package' must be a single package name as a character vector")
     # package already loaded
+    if (verbose>2)
+        cat('library.local: Starting on', package, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
     if (is.element(package, .packages())) {
         if (verbose > 2)
             cat("package ", package, ' is already loaded\n')
@@ -60,10 +62,11 @@ library.local <- function(package, character.only=FALSE,
     # Check again whether the desired package is loaded.
     # Could be strange/unusual circumstances where it got loaded as
     # a result of loading the dependencies
-    if (is.element(package, .packages()))
+    if (is.element(package, .packages())) {
+        if (verbose > 2)
+            cat("package ", package, ' is already loaded (found after loading dependencies)\n')
         return(.packages())
-    if (verbose>2)
-        cat('library.local: Starting on', package, 'at', format(Sys.time(), "%Y-%m-%d %H:%M:%OS3"), '\n')
+    }
     local.lib.locs <- setdiff(local.lib.locs, '')
     local.lib.locs <- gsub('[/\\\\]$', '', local.lib.locs)
     local.lib.locs <- local.lib.locs[order(basename(local.lib.locs)=='R_local_libs', decreasing=TRUE)]
@@ -72,6 +75,8 @@ library.local <- function(package, character.only=FALSE,
     for (dir in local.lib.locs) {
         if (isTRUE(file.info(dir)$isdir) && isTRUE(as.logical(file.access(dir, 4)==0))) {
             local.lib.loc <- dir
+            if (verbose > 2)
+                cat('found writeable component of local.lib.locs at', dir, '\n')
             break
         }
     }
@@ -97,6 +102,8 @@ library.local <- function(package, character.only=FALSE,
         && regexpr(paste('^', package, '_local_copy_', sep=''), basename(dirname(orig.pkg.dir)), fixed=TRUE) > 0) {
         # The original library is already in the place where we make copies, and looks like a copy,
         # so don't go making another a copy of it.
+        if (verbose>2)
+            cat('library.local: original library', orig.pkg.dir, 'looks like it is already a copy; not making another copy\n')
         copy.lib.dir <- dirname(orig.pkg.dir)
     } else if (length(copy.lib.dir)==1) {
         found <- FALSE
